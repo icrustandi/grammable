@@ -1,6 +1,47 @@
 require 'rails_helper'
 
 RSpec.describe GramsController, type: :controller do
+  describe "grams#update" do
+    it "should allow user to update gram" do
+      ugram = FactoryGirl.create(:gram, message: "Initial value")
+      patch :update, id: ugram.id, gram: {message: "changed value"}
+
+      expect(response).to redirect_to root_path
+
+      ugram.reload
+      expect(ugram.message).to eq "changed value"
+    end
+
+    it "should render 404 if gram cannot be found" do
+      patch :update, id: "HARAMBE", gram: {message: 'changed value'}
+      expect(response).to have_http_status(:not_found)
+    end
+
+    it "should render edit form with unprocessable_entity" do
+      ugram = FactoryGirl.create(:gram, message: "Initial value")
+      patch :update, id: ugram.id, gram: {message: ""}
+
+      expect(response).to have_http_status(:unprocessable_entity)
+
+      ugram.reload
+      expect(ugram.message).to eq "Initial value"
+    end
+  end
+
+
+  describe "grams#edit" do
+    it "should show edit form if gram is found" do
+      egram = FactoryGirl.create(:gram)
+      get :edit, id: egram.id
+      expect(response).to have_http_status(:success)
+    end
+
+    it "should return 404 if gram is not found"do
+      get :edit, id: 'HARAMBE'
+      expect(response).to have_http_status(:not_found)
+    end
+  end
+
   describe "grams#show action" do
     it "should successfully show the page if the gram is found" do
       gram = FactoryGirl.create(:gram) 
@@ -10,13 +51,11 @@ RSpec.describe GramsController, type: :controller do
     end
     
     it "should return a 404 error if the gram is not found" do
-      get :show, id: 'TACOCAT'
+      get :show, id: 'HARAMBE'
       expect(response).to have_http_status(:not_found)
     end
   end
   
-
-
   describe "grams#index action" do
     it "should successfully show the page" do
       get :index
@@ -40,6 +79,11 @@ RSpec.describe GramsController, type: :controller do
   end
 
   describe "grams#create action" do
+    it "should require users to be logged in" do
+      post :create, gram: { message: "Hello" }
+      expect(response).to redirect_to new_user_session_path
+    end
+    
     it "should create a new gram in database" do
       user = FactoryGirl.create(:user)
       sign_in user
